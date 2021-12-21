@@ -1,0 +1,2 @@
+class SidesValidationError(Exception):
+    pass

@@ -1,0 +1,13 @@
+OUTPUT_SUMMARY = "s"
+OUTPUT_LIST = "l"
+CRAWL_MODE = "M"
+MODE_SIMPLE = "s"
+MODE_EXTENDED = "e"
+HIT = "h"
+LINK = "l"
+
+HEADER_PATH = "Path"
+HEADER_NAME = "Name"
+HEADER_SIZE = "Size"
+HEADER_MODIFIED = "Modified"
+HEADER_ACCESSED = "Accessed"

@@ -1,0 +1,1 @@
+from kiboko_shortcodes import Shortcodes

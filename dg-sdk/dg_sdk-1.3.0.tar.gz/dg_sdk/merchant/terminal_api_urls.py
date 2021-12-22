@@ -1,0 +1,5 @@
+create_url = "/ssproxy/createDeviceApplyOrder"
+query_list_url = "/ssproxy/queryDeviceApplyOrderList"
+query_detail_url = "/ssproxy/queryDeviceApplyOrderDetail"
+cancel_apply_url = "/ssproxy/cancelDeviceApplyOrder"
+query_sale_plan_url = "/ssproxy/queryMerchantSalesStrategy"

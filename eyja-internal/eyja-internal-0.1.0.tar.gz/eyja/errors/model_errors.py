@@ -1,0 +1,2 @@
+class ParseModelNamespaceError(Exception):
+    pass

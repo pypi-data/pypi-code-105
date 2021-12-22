@@ -1,0 +1,16 @@
+ANIMALS = [
+    "CAT",
+    "DOG",
+    "FOX",
+    "DEER",
+    "RABBIT",
+    "MOUSE",
+    "RAT",
+    "COW",
+    "PIG",
+    "HORSE",
+    "BEAR",
+    "OTTER",
+    "SALMON",
+    "TROUT",
+]

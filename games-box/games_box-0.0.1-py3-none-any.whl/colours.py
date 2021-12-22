@@ -1,0 +1,15 @@
+COLOURS = [
+    "BLACK",
+    "WHITE",
+    "GREY",
+    "RED",
+    "GREEN",
+    "BLUE",
+    "YELLOW",
+    "BROWN",
+    "PURPLE",
+    "ORANGE",
+    "PINK",
+    "CYAN",
+    "MAGENTA",
+]

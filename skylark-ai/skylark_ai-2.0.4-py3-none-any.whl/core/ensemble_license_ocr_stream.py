@@ -1,0 +1,174 @@
+from skylark.core.streams import StreamClient
+
+import cv2
+import time
+import asyncio
+from skylark.core.clients import RealTimeClient
+from skylark.core.clients import Service
+import logging
+from skylark.utils.utils import VideoGet
+import numpy as np
+import base64
+from bounding_box import bounding_box as draw_boxes
+
+
+class EnsembleLicenseOCRStreamClient(StreamClient):
+	def __init__(self,id, fps, batch_size, sampling_rate, token, show_processed_stream=False,
+	 save_raw_frames=False, scale_percent=100, quality=100, stream=0):
+		self.fps = fps
+		self.frames = []
+		self.json = ""
+		self.syncid = -1
+		self.batch_size = batch_size
+		self.sampling_rate = sampling_rate
+		self.sample_length = int(fps / sampling_rate)
+		self.delay_sec = 1 / self.fps
+		self.stream = stream
+		self.vid = VideoGet(self.stream).start()
+		self.token = token
+		print("real time hit")
+		self.client = RealTimeClient(Service.ENSEMBLE_LICENSE_OCR, self.on_receive, batch_size, self.on_network_status_change, self.token)
+		print("hit done")
+		self.response_jsons = []
+		self.show_processed_stream = show_processed_stream
+		self.save_raw_frames = save_raw_frames
+		self.scale_percent = scale_percent
+		self.quality = quality
+		self.id = id
+		self.createTasks()
+	
+	def np_from_json(self, obj, prefix_name=""):
+		return np.frombuffer(base64.b64decode(obj["{}_frame".format(prefix_name)].encode("utf-8")),dtype=np.dtype(obj["{}_dtype".format(prefix_name)])).reshape(
+			obj["{}_shape".format(prefix_name)])
+
+	def scale_coordinates(self, json):
+		output =json['results']
+
+		license_plates = self.np_from_json(output['license_plates'])
+
+		ocr_output = output['ocr_output']
+		new_result = {}
+		new_result['license_plates']= license_plates
+		new_result['ocr_output'] = ocr_output
+
+		json['results'] = new_result
+		print("################################################  converted json #################################################")
+		print(json)
+
+	def draw_boxes(self, frame, coord_list, color, thickness):
+		for coords in coord_list:
+			start_point = (int(coords[0]),int(coords[1]))
+			end_point = (int(coords[2]),int(coords[3]))
+			frame = cv2.rectangle(frame,start_point,end_point, color, 3)
+		return frame
+
+
+	async def show_stream(self):
+		# on message receive from websocket, we parse json response and show stream using cv2
+		if self.show_processed_stream:
+			while True:
+				try:
+					# print("######################################################show stream")
+					if len(self.response_jsons) == 0:
+						# if no responses then keep waiting for some message to be received
+						print("waiting inside show stream")
+						print(len(self.response_jsons))
+						await asyncio.sleep(1)
+						continue
+					# print("#############################  have content  #############################")
+					print(len(self.response_jsons))
+					# take out one of the response from beginning and apply the result to the frames
+					response = self.response_jsons.pop(0)
+					# syncid is used to maintain between sent and received frames
+					self.syncid = self.syncid + self.batch_size
+					syncids = response["sync"]
+					if self.syncid != syncids[-1]:
+						# if syncid sent and received for a particular response is not same then acheive sync
+						print("##########################not in sync:###################################")
+						print(self.syncid)
+						print(syncids[-1])
+						if self.syncid > syncids[-1]:
+							# discarding results
+							while self.syncid != syncids[-1]:
+								syncids = response["sync"]
+								self.response_jsons.pop(0)
+						else:
+							# discarding frames
+							while self.syncid != syncids[-1]:
+								self.frames.pop(0)
+								self.syncid = self.syncid + 1
+						continue
+					
+				except Exception as e:
+					logging.error("Error")
+					exit()
+
+				else:
+					org = (20, 20)
+					font = cv2.FONT_HERSHEY_SIMPLEX
+					fontScale = 0.5
+					color = (255, 0, 0)
+					thickness = 1
+					# when in sync move further
+					print("############### in sync ###########################")
+					try:
+						self.delay_sec = 1/(self.fps + len(self.frames)/5)
+						results = response["results"]
+						# results = results["final_output"]
+						# license_plates, ocr_output = outputs
+						license_plates = results["license_plates"]
+						ocr_output = results["ocr_output"]
+
+					
+						for i in range(self.sample_length):
+							frame = self.frames.pop(0)
+							start_time = time.time()
+							for result in results:
+								num_of_outputs = len(license_plates)
+								for idx in range(num_of_outputs):
+									x1 = license_plates[idx][0][0]
+									y1 = license_plates[idx][0][1]
+									x2 = license_plates[idx][1][0]
+									y2 = license_plates[idx][1][1]
+									ocr_text = ocr_output[idx]
+									# draw_boxes.add(frame, x1, y1, x2, y2, ocr_text)
+									frame = cv2.rectangle(frame,(x1,y1),(x2,y2), (255,0,0),3)
+									frame = cv2.putText(frame, ocr_text, org, font, fontScale, color, thickness, cv2.LINE_AA)
+
+							cv2.imshow(str(self.id), frame)
+							cv2.waitKey(1)
+							time_spent = time.time() - start_time
+							rem_time = max(self.delay_sec - time_spent, 0)
+							await asyncio.sleep(rem_time)
+
+						# for result in response['results']:
+						# 	for i in range(self.sample_length):
+						# 		frame = self.frames.pop(0)
+						# 		start = time.time()
+						# 		if result["has_mask"]  != []:
+						# 			color = (0, 255, 0)    #indicates mask is on
+						# 			coords = result["has_mask"][0]
+						# 			start_point = (coords[0],coords[1])
+						# 			end_point = (coords[2],coords[3])
+						# 			print("Has mask")
+						# 		elif result["has_no_mask"] != []:
+						# 			color = (0, 0, 255)    #indicates mask is off
+						# 			coords = result["has_no_mask"][0]
+						# 			start_point = (coords[0],coords[1])
+						# 			end_point = (coords[2],coords[3])
+						# 			print("Has no mask")
+						# 		thickness = 1
+						# 		# creating face rectangles using cv2
+						# 		cv2.imshow('outputstream', cv2.rectangle(
+						# 			frame,
+						# 			start_point,
+						# 			end_point, color, thickness
+						# 		))
+						# 		cv2.waitKey(1)  
+						# 		time_spent = time.time() - start
+						# 		rem_time = max(self.delay_sec - time_spent, 0)
+						# 		await asyncio.sleep(rem_time)
+					except Exception as e:
+						logging.exception("Error")
+						print("ex in face_mask_stream line 129")
+						exit()

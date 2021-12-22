@@ -1,0 +1,2 @@
+def devide():
+    print("devide")

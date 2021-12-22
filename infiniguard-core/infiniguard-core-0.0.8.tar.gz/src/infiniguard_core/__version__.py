@@ -1,0 +1,11 @@
+__version__ = "0.0.8"
+__git_commiter_name__ = "Maxim Kigel"
+__git_commiter_email__ = "mkigel@infinidat.com"
+__git_branch__ = 'develop'
+__git_remote_tracking_branch__ = 'origin/develop'
+__git_remote_url__ = 'https://git.infinidat.com/solutions/infiniguard/infiniguard-core.git'
+__git_head_hash__ = '4ed82d800996fe4372abbe789f650b9c2aa132f9'
+__git_head_subject__ = 'Finished Release v0.0.8'
+__git_head_message__ = ''
+__git_dirty_diff__ = ''
+__git_commit_date__ = '2021-12-22 18:08:19'

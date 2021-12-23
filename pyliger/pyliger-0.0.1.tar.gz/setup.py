@@ -1,0 +1,30 @@
+from setuptools import setup, find_packages
+
+setup(name='pyliger',
+      version='0.0.1',
+      description='The Python version of LIGER package.',
+      url='https://github.com/welch-lab/pyliger',
+      author='',
+      author_email='',
+      license='MIT',
+      packages=find_packages(),
+      keywords='LIGER',
+      install_requires=[
+              'pandas',
+              'numpy',
+              'scipy',
+              'anndata',
+              'python-igraph',
+              'annoy',
+              'louvain',
+              'leidenalg',
+              'umap-learn',
+              'matplotlib',
+              'datashader',
+              'bokeh',
+              'holoviews',
+              'colorcet',
+              'scikit-learn',
+              'h5sparse'
+              ],
+      zip_safe=False)

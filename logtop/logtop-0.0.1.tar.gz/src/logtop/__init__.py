@@ -1,0 +1,1 @@
+from .logtop import trace, info, success, debug, warning, error, critical, logsconfig

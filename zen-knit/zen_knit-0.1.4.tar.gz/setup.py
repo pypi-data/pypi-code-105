@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+from setuptools import setup
+
+packages = \
+['zen_knit',
+ 'zen_knit.data_types',
+ 'zen_knit.executor',
+ 'zen_knit.formattor',
+ 'zen_knit.formattor.html_support',
+ 'zen_knit.organizer',
+ 'zen_knit.parser',
+ 'zen_knit.reader']
+
+package_data = \
+{'': ['*']}
+
+install_requires = \
+['Markdown>=3.3.6,<4.0.0',
+ 'click>=8.0.3,<9.0.0',
+ 'ipykernel>=6.0.0',
+ 'ipython>=7.0',
+ 'jupyter-client>=7.1.0,<8.0.0',
+ 'nbconvert>=6.0.0',
+ 'nbformat>=5.1.3,<6.0.0',
+ 'pydantic>=1.8.2,<2.0.0']
+
+entry_points = \
+{'console_scripts': ['knit = zen_knit.cli:knit']}
+
+setup_kwargs = {
+    'name': 'zen-knit',
+    'version': '0.1.4',
+    'description': 'Zen-Knit is a formal (PDF), informal (HTML) report generator for data analyst and data scientist who wants to use python. Inspired from Pweave. ',
+    'long_description': 'About Zen-Knit:\n---------------\n\nZen-Knit is a formal (PDF), informal (HTML) report generator for data analyst and data scientist who wants to use python. Inspired from Pweave. \nZen-Knit is good for creating reports, tutorials with embedded python\n\nFeatures:\n---------\n\n* Python 3.6+ compatibility\n* Support for IPython magics and rich output.\n* **Execute python code** in the chunks and **capture** input and output to a report.\n* **Use hidden code chunks,** i.e. code is executed, but not printed in the output file.\n* Capture matplotlib graphics.\n* Evaluate inline code in documentation chunks marked using ```{ }`` \n* Publish reports from Python scripts. Similar to R markdown.\n* integrate it in your process. It will fit your need rather than you need to adjust for tool.\n\nInstall\n-----------------------\n\nFrom PyPi::\n\n  pip install --upgrade zen-knit\n\nor download the source and run::\n\n  python setup.py install\n\n\n\nLicense information\n-------------------\n\nPermission is hereby granted, free of charge, to any person obtaining\na copy of this software and associated documentation files (the\n"Software"), to deal in the Software without restriction, including\nwithout limitation the rights to use, copy, modify, merge, publish,\ndistribute, sublicense, and/or sell copies of the Software, and to\npermit persons to whom the Software is furnished to do so, subject to\nthe following conditions:\n\nThe above copyright notice and this permission notice shall be\nincluded in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,\nEXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF\nMERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND\nNONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE\nLIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION\nOF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION\nWITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.',
+    'author': 'Zen',
+    'author_email': 'zenreportz@protonmail.com',
+    'maintainer': None,
+    'maintainer_email': None,
+    'url': 'https://github.com/Zen-Reportz/zen_knit',
+    'packages': packages,
+    'package_data': package_data,
+    'install_requires': install_requires,
+    'entry_points': entry_points,
+    'python_requires': '>=3.7,<4.0',
+}
+
+
+setup(**setup_kwargs)

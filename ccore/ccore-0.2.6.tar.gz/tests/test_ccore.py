@@ -1,0 +1,330 @@
+﻿#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import os
+import sys
+from glob import glob
+from timeit import timeit
+from psutil import Process
+from datetime import datetime
+if sys.version_info[:2] >= (3, 7):
+    from datetime import timezone, timedelta
+PY2 = sys.version_info[0] == 2
+
+# github action problem in windows default codepage 1252 environment
+# https://stackoverflow.com/questions/27092833/unicodeencodeerror-charmap-codec-cant-encode-characters
+defaultencoding = 'utf-8'
+if sys.stdout.encoding != defaultencoding:
+    if PY2:
+        reload(sys)
+        sys.setdefaultencoding(defaultencoding)
+    elif os.name == "nt":
+        sys.stdout.reconfigure(encoding=defaultencoding)
+
+from os.path import dirname, abspath, join as pjoin
+shome = abspath(pjoin(dirname(__file__), ".."))
+sys.path.insert(0, pjoin(shome, "build"))
+sys.path.insert(0, pjoin(shome, "build", "cmake-build"))
+sys.path.insert(0, pjoin(shome, "_skbuild", "cmake-build"))
+sys.path.insert(0, pjoin(shome, "build", "cmake-install"))
+sys.path.insert(0, pjoin(shome, "_skbuild", "cmake-install"))
+try:
+    from ccore import *
+    kw = {"setup": "from ccore import *"} if PY2 else {}
+except ImportError:
+    try:
+        from _ccore import *
+        kw = {"setup": "from _ccore import *"} if PY2 else {}
+    except ImportError:
+        from ccore._ccore import *
+        kw = {"setup": "from ccore._ccore import *"} if PY2 else {}
+
+
+from socket import gethostname
+__tdpath = "/portable.app/usr/share/testdata/"
+if gethostname() == "localhost":
+    tdir = "/storage/emulated/0/Android/data/com.dropbox.android/files/u9335201/scratch" + __tdpath
+elif os.name == "posix":
+    tdir = os.getenv("HOME") + "/Dropbox/" + __tdpath
+else:
+    tdir = "Y:/usr/share/testdata/"
+
+
+process = Process(os.getpid())
+def memusage():
+    return process.memory_info()[0] / 1024
+
+def runtimeit(funcstr, number=10000):
+    i = 0
+    kw["number"] = number
+    if sys.version_info[0] >= 3:
+        kw["globals"] = globals()
+
+    for fc in funcstr.strip().splitlines():
+        fc = fc.strip()
+
+        if i == 0:
+            timeit(fc, **kw)
+        bm = memusage()
+        p = timeit(fc, **kw)
+
+        am = (memusage() - bm)
+        assert am < 10000, "{} function {}KB Memory Leak Error".format(fc, am)
+        print("{}: {} ns (mem after {}KB)".format(fc, int(1000000000 * p / number), am))
+        i += 1
+
+
+def test_flatten():
+    assert(flatten([[1, 2], [3, 4], [[5, 6]]]) == [1, 2, 3, 4, 5, 6])
+    assert(flatten("abc") == ['a', 'b', 'c'])
+    assert(flatten(u"あいう") == [u'あ', u'い', u'う'])
+    assert(flatten(1) == [1])
+    runtimeit('flatten([[1,2], [3,4], [[5, 6]]])')
+
+
+def test_listify():
+    assert(listify("1") == ['1'])
+    runtimeit("listify('1')==['1']")
+
+
+def test_to_hankaku():
+    assert(to_hankaku(u"１２３") == u'123')
+    assert(to_hankaku(u"1あ!#ア ２") == u"1あ!#ｱ 2")
+    runtimeit('to_hankaku(u"１")')
+
+
+def test_to_zenkaku():
+    assert(to_zenkaku(u"1") == u"１")
+    assert(to_zenkaku(u"1あア!# ２") == u"１あア！＃　２")
+    assert(to_zenkaku(u"\"") == u"＂")
+    runtimeit('to_zenkaku(u"1")')
+
+
+def test_lookuptype():
+    assert(lookuptype(b"   \x20\xef\xbb\xbf<?xml version>hogejkflkdsfkja;l?>") == "xml")
+    assert(lookuptype(b"hoge") == "txt")
+    assert(lookuptype(b'PK\x03\x04dsfal\x00') == "zip")
+    assert(lookuptype(b"hogegggggggggggggggg;gggggrecord  end;") == "dml")
+    runtimeit('lookuptype(b"hoge")')
+    runtimeit("lookuptype(b'PK\\x03\\x04dsfal\\x00')")
+
+def test_guesstype():
+    for g in glob(tdir + "*"):
+        basename = os.path.basename(g)
+        with open(g, "rb") as f:
+            print(basename, lookuptype(f.read(256)))
+
+def test_kanji2int():
+    assert(kanji2int(u"一億２千") == "100002000")
+    runtimeit('kanji2int(u"一億２千")')
+
+
+def test_int2kanji():
+    assert(int2kanji(123456789) == u"一億二千三百四十五万六千七百八十九")
+    runtimeit('int2kanji(123456789)')
+
+
+def test_to_datetime():
+    import shutil
+    shutil.rmtree(os.path.join(os.environ.get("TMP", "/tmp"), "dat"), True)
+    assert(to_datetime('2000/01/01') == datetime(2000, 1, 1))
+    assert(to_datetime('1999/01/01') == datetime(1999, 1, 1))
+    assert(to_datetime('20060314') == datetime(2006, 3, 14))
+    assert(to_datetime('2006/03/14') == datetime(2006, 3, 14))
+    assert(to_datetime('14/03/2006') == datetime(2006, 3, 14))
+    assert(to_datetime('03/14/2006') == datetime(2006, 3, 14))
+    assert(to_datetime('2006/3/3') == datetime(2006, 3, 3))
+    assert(to_datetime('2006-03-14') == datetime(2006, 3, 14))
+    assert(to_datetime('03-14-2006') == datetime(2006, 3, 14))
+    assert(to_datetime('14.03.2006') == datetime(2006, 3, 14))
+    assert(to_datetime('03.14.2006') == datetime(2006, 3, 14))
+    assert(to_datetime('03-Mar-06') == datetime(2006, 3, 3))
+    assert(to_datetime('14-Mar-06') == datetime(2006, 3, 14))
+    assert(to_datetime('03-Mar-2006') == datetime(2006, 3, 3))
+    assert(to_datetime('14-Mar-2006') == datetime(2006, 3, 14))
+    assert(to_datetime('14-03-2006') == datetime(2006, 3, 14))
+    assert(to_datetime('20061403', dayfirst=True) == datetime(2006, 3, 14))
+    assert(to_datetime('2006/14/03', dayfirst=True) == datetime(2006, 3, 14))
+    assert(to_datetime('2006-14-03', dayfirst=True) == datetime(2006, 3, 14))
+    assert(to_datetime('13 27 54 123') == datetime(1970, 1, 1, 13, 27, 54, 123000))
+    assert(to_datetime('13 27 54') == datetime(1970, 1, 1, 13, 27, 54))
+    assert(to_datetime('13.27.54.123') == datetime(1970, 1, 1, 13, 27, 54, 123000))
+    assert(to_datetime('13.27.54') == datetime(1970, 1, 1, 13, 27, 54))
+    assert(to_datetime('13:27:54.123') == datetime(1970, 1, 1, 13, 27, 54, 123000))
+    assert(to_datetime('13:27:54') == datetime(1970, 1, 1, 13, 27, 54))
+    assert(to_datetime('1327') == datetime(1970, 1, 1, 13, 27))
+    assert(to_datetime('132754') == datetime(1970, 1, 1, 13, 27, 54))
+    assert(to_datetime('132754123') == datetime(1970, 1, 1, 13, 27, 54, 123000))
+    assert(to_datetime('20060314 13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('2006/03/14 13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('14/03/2006 13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('20060314 13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('2006/03/14 13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('14/03/2006 13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('2006-03-14 13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('14-03-2006 13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('2006-03-14 13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('14-03-2006 13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('2006-03-14T13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('2006-03-14T13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('20060314T13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('20060314T13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('14-03-2006T13:27:54.123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('14-03-2006T13:27:54') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('20060314T1327') == datetime(2006, 3, 14, 13, 27))
+    assert(to_datetime('20060314T132754') == datetime(2006, 3, 14, 13, 27, 54))
+    assert(to_datetime('20060314T132754123') == datetime(2006, 3, 14, 13, 27, 54, 123000))
+    assert(to_datetime('08-24-2001 20:10') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime('Friday, August 24th, 2001 20:10') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime('Fri Aug. 24, 2001 8:10 p.m.') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime('Aug. 24, 2001 20:10') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime('2001/08/24 20:10') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime('2001/08/24 2010') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime(u'2001年8月24日金曜日 20:10') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime(u'2001年8月24日(金) 20:10') == datetime(2001, 8, 24, 20, 10))
+    assert(to_datetime(u'3月 25 00:40') == datetime(1970, 3, 25, 0, 40))
+    assert(to_datetime(u'11月 29  2018') == datetime(2018, 11, 29))
+    assert(to_datetime(u'1月 16  2019') == datetime(2019, 1, 16))
+    assert(to_datetime("1999/12/31") == datetime(1999, 12, 31))
+    if sys.version_info[:2] >= (3, 7):
+        assert(to_datetime('2006-03-14T13:27:54+03:45') == datetime(2006, 3, 14, 13, 27, 54, tzinfo=timezone(timedelta(hours=3, minutes=45))))
+        assert(to_datetime('2006-03-14T13:27+03:45') == datetime(2006, 3, 14, 13, 27, tzinfo=timezone(timedelta(hours=3, minutes=45))))
+        assert(to_datetime('14/Mar/2006:13:27:54 -0537') == datetime(2006, 3, 14, 13, 27, 54, tzinfo=timezone(timedelta(hours=-5, minutes=-37))))
+        assert(to_datetime('Sat, 14 Mar 2006 13:27:54 GMT') == datetime(2006, 3, 14, 13, 27, 54, tzinfo=timezone(timedelta(seconds=0))))
+        assert(to_datetime('平成１３年８月２４日　午後八時十分') == datetime(2001, 8, 24, 20, 10, tzinfo=timezone(timedelta(hours=9))))
+        assert(to_datetime('平成13年08月24日PM 08:10') == datetime(2001, 8, 24, 20, 10, tzinfo=timezone(timedelta(hours=9))))
+        assert(to_datetime('H13年08月24日　PM08:10') == datetime(2001, 8, 24, 20, 10, tzinfo=timezone(timedelta(hours=9))))
+        assert(to_datetime('平13年08月24日　午後8:10') == datetime(2001, 8, 24, 20, 10, tzinfo=timezone(timedelta(hours=9))))
+        assert(to_datetime('平成13年08/24午後08:10') == datetime(2001, 8, 24, 20, 10, tzinfo=timezone(timedelta(hours=9))))
+        assert(to_datetime('平成元年０８月２４日　２０時１０分００秒') == datetime(1989, 8, 24, 20, 10, tzinfo=timezone(timedelta(hours=9))))
+        assert(to_datetime("平成一年一月十一日") == datetime(1989, 1, 11, tzinfo=timezone(timedelta(hours=9))))
+        assert(to_datetime('天正10年6月2日') == datetime(1582, 6, 2, tzinfo=timezone(timedelta(hours=9))))
+    else:
+        assert(to_datetime('2006-03-14T13:27:54+03:45') == datetime(2006, 3, 14, 13, 27, 54))
+        assert(to_datetime('2006-03-14T13:27+03:45') == datetime(2006, 3, 14, 13, 27))
+        assert(to_datetime('14/Mar/2006:13:27:54 -0537') == datetime(2006, 3, 14, 13, 27, 54))
+        assert(to_datetime('Sat, 14 Mar 2006 13:27:54 GMT') == datetime(2006, 3, 14, 13, 27, 54))
+        assert(to_datetime(u'平成１３年８月２４日　午後八時十分') == datetime(2001, 8, 24, 20, 10))
+        assert(to_datetime(u'平成13年08月24日PM 08:10') == datetime(2001, 8, 24, 20, 10))
+        assert(to_datetime(u'H13年08月24日　PM08:10') == datetime(2001, 8, 24, 20, 10))
+        assert(to_datetime(u'平13年08月24日　午後8:10') == datetime(2001, 8, 24, 20, 10))
+        assert(to_datetime(u'平成13年08/24午後08:10') == datetime(2001, 8, 24, 20, 10))
+        assert(to_datetime(u'平成元年０８月２４日　２０時１０分００秒') == datetime(1989, 8, 24, 20, 10))
+        assert(to_datetime(u"平成一年一月十一日") == datetime(1989, 1, 11))
+        assert(to_datetime(u'天正10年6月2日') == datetime(1582, 6, 2))
+
+    test = u"""
+    ====== ここからWikipediaの織田信長から引用文 ======
+    織田 信長（おだ のぶなが、天文3年5月12日〈1534年6月23日〉 - 天正10年6月2日〈1582年6月21日〉）は、
+    日本の戦国時代から安土桃山時代にかけての武将、戦国大名。三英傑の一人。
+
+    尾張国（現在の愛知県）の織田信秀の嫡男。家督争いの混乱を収めた後に、
+    桶狭間の戦いで今川義元を討ち取り、勢力を拡大した。足利義昭を奉じて上洛し、後には義昭を追放することで、
+    畿内を中心に独自の中央政権（「織田政権」[注釈 4]）を確立して天下人となった。
+    しかし天正10年6月2日（1582年6月21日）、重臣・明智光秀に謀反を起こされ、本能寺で自害した。
+    これまで信長の政権は、豊臣秀吉による豊臣政権、徳川家康が開いた江戸幕府へと引き継がれていく、
+    画期的なものであったとみなされてきた[2]。
+    しかし、政策の実態などから「中世社会の最終段階」ともしばしば評され[2]、
+    特に近年の歴史学界では信長の革新性を否定する研究が主流となっている[3][4]。
+
+
+    Oda Nobunaga (織田 信長, About this soundlisten; 3 Jul 1534 - 21 Jun, 1582) was
+    a Japanese daimyo and one of the leading figures of the Sengoku period. 
+    He is regarded as the first "Great Unifier" of Japan. 
+    His reputation in war gave him the nickname of "Demon Daimyo" or "Demon King".
+
+    Nobunaga was head of the very powerful Oda clan, 
+    and launched a war against other daimyos to unify Japan in the 1560s. 
+    Nobunaga emerged as the most powerful daimyo, 
+    overthrowing the nominally ruling shogun Ashikaga Yoshiaki and 
+    dissolving the Ashikaga Shogunate in 1573. He conquered most of Honshu island by 1580,
+    and defeated the Ikko-ikki rebels by the 1580s.
+    Nobunaga's rule was noted for innovative military tactics, fostering free trade,
+    reform of Japan's civil government, and encouraging the start of the Momoyama historical art period, 
+    but also for the brutal suppression of opponents, eliminating those who refused to cooperate or
+    yield to his demands. Nobunaga was killed in the Honno-ji Incident in 1582 when his retainer 
+    Akechi Mitsuhide ambushed him in Kyoto and forced him to commit seppuku.
+    Nobunaga was succeeded by Toyotomi Hideyoshi who along with Tokugawa Ieyasu completed his war of
+    unification shortly afterwards.
+
+    """
+
+    ans = u"""
+    ====== ここからWikipediaの織田信長から引用文 ======
+    織田 信長（おだ のぶなが、1534/05/12 00:00:00〈1534/06/23 00:00:00〉 - 1582/06/02 00:00:00〈1582/06/21 00:00:00〉）は、
+    日本の戦国時代から安土桃山時代にかけての武将、戦国大名。三英傑の一人。
+
+    尾張国（現在の愛知県）の織田信秀の嫡男。家督争いの混乱を収めた後に、
+    桶狭間の戦いで今川義元を討ち取り、勢力を拡大した。足利義昭を奉じて上洛し、後には義昭を追放することで、
+    畿内を中心に独自の中央政権（「織田政権」[注釈 4]）を確立して天下人となった。
+    しかし1582/06/02 00:00:00（1582/06/21 00:00:00）、重臣・明智光秀に謀反を起こされ、本能寺で自害した。
+    これまで信長の政権は、豊臣秀吉による豊臣政権、徳川家康が開いた江戸幕府へと引き継がれていく、
+    画期的なものであったとみなされてきた[2]。
+    しかし、政策の実態などから「中世社会の最終段階」ともしばしば評され[2]、
+    特に近年の歴史学界では信長の革新性を否定する研究が主流となっている[3][4]。
+
+
+    Oda Nobunaga (織田 信長, About this soundlisten; 1534/07/03 21:00:00) was
+    a Japanese daimyo and one of the leading figures of the Sengoku period. 
+    He is regarded as the first "Great Unifier" of Japan. 
+    His reputation in war gave him the nickname of "Demon Daimyo" or "Demon King".
+
+    Nobunaga was head of the very powerful Oda clan, 
+    and launched a war against other daimyos to unify Japan in the 1560s. 
+    Nobunaga emerged as the most powerful daimyo, 
+    overthrowing the nominally ruling shogun Ashikaga Yoshiaki and 
+    dissolving the Ashikaga Shogunate in 1573. He conquered most of Honshu island by 1580,
+    and defeated the Ikko-ikki rebels by the 1580s.
+    Nobunaga's rule was noted for innovative military tactics, fostering free trade,
+    reform of Japan's civil government, and encouraging the start of the Momoyama historical art period, 
+    but also for the brutal suppression of opponents, eliminating those who refused to cooperate or
+    yield to his demands. Nobunaga was killed in the Honno-ji Incident in 1582 when his retainer 
+    Akechi Mitsuhide ambushed him in Kyoto and forced him to commit seppuku.
+    Nobunaga was succeeded by Toyotomi Hideyoshi who along with Tokugawa Ieyasu completed his war of
+    unification shortly afterwards.
+
+    """
+    assert(normalized_datetime(test) == ans)
+
+    runtimeit('to_datetime(u"平成13年08月24日PM 08:10")')
+    runtimeit('normalized_datetime(u"hogegefooほげ平成13年08月24日PM 08:10むう")')
+    runtimeit('extractdate(u"hogegefooほげ平成13年08月24日PM 08:10むう")')
+
+def _test_expect_ValueError(val):
+    try:
+        to_datetime(val)
+        assert(False)
+    except ValueError:
+        pass
+    except:
+        assert(False)
+
+def test_error_datetime():
+    _test_expect_ValueError(None)
+    _test_expect_ValueError(1)
+    _test_expect_ValueError(1.0)
+    _test_expect_ValueError(int)
+    _test_expect_ValueError([])
+    _test_expect_ValueError([1])
+    _test_expect_ValueError((1,))
+    assert(to_datetime(b"2020/01/01") == datetime(2020, 1, 1))
+    assert(to_datetime("") == None)
+    assert(to_datetime("hoge") == None)
+    assert(to_datetime(u"ho123年ge") == None)
+
+
+if __name__ == '__main__':
+    import os
+    import traceback
+
+    curdir = os.getcwd()
+    try:
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        for fn, func in dict(locals()).items():
+            if fn.startswith("test_"):
+                print("Runner: %s" % fn)
+                func()
+    except Exception as e:
+        traceback.print_exc()
+        raise (e)
+    finally:
+        os.chdir(curdir)

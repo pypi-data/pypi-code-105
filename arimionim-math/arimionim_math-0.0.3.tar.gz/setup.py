@@ -1,0 +1,26 @@
+from setuptools import setup
+
+setup(
+    name='arimionim_math',
+    version='0.0.3',
+    description='Arimionim\'s example Python package',
+    url='https://github.com/abc/xyz',
+    author='Arslan Aknazarov',
+    author_email='abc@xyz.ru',
+    license='BSD 2-clause',
+    packages=['arimionim_math'],
+    install_requires=["numpy==1.17.2"],
+
+    classifiers=[
+        'Development Status :: 1 - Planning',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: POSIX :: Linux',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
+    ],
+)
+

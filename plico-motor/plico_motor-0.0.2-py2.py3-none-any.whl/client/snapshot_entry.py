@@ -1,0 +1,9 @@
+
+class SnapshotEntry(object):
+    MOTOR_NAME = 'NAME'
+    POSITION = "POS"
+    STEPS_PER_SI_UNITS = 'SI2STEPS'
+    WAS_HOMED = 'WASHOMED'
+    MOTOR_TYPE = 'TYPE'
+    IS_MOVING = 'ISMOVING'
+    LAST_COMMANDED_POSITION = 'LASTCMD'

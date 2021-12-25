@@ -1,0 +1,4 @@
+OUTPUT = True
+INPUT = False
+ANALOG = 2
+PWM = 3

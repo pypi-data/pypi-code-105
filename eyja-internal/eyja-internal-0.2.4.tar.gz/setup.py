@@ -1,0 +1,46 @@
+from setuptools import setup
+
+
+setup(
+    name='eyja-internal',
+    zip_safe=True,
+    version='0.2.4',
+    description='Smart async framework',
+    url='https://gitlab.com/public.eyja.dev/eyja-internal',
+    maintainer='Anton Berdnikov',
+    maintainer_email='agratoth@yandex.ru',
+    packages=[
+      'eyja',
+      'eyja.db',
+      'eyja.db.hub',
+      'eyja.db.models',
+      'eyja.db.rethinkdb',
+      'eyja.db.redis',
+      'eyja.common',
+      'eyja.common.proxies',
+      'eyja.errors',
+      'eyja.utils',
+    ],
+    package_dir={'eyja': 'eyja'},
+    install_requires=[
+        'aiofiles>=0.8.0',
+        'pydantic>=1.8.2',
+        'pytz>=2021.3',
+        'PyYAML>=6.0',
+        'rethinkdb>=2.4.8',
+        'six>=1.16.0',
+        'typing_extensions>=4.0.1',
+        'aioredis>=2.0.0',
+        'python-slugify>=5.0.2',
+    ],
+    classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+    ],
+    python_requires='>=3.8',
+    long_description=open('README.md').read(),
+    long_description_content_type='text/markdown',
+)

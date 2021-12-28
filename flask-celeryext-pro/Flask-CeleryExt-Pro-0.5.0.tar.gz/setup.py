@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+#
+# This file is part of Flask-CeleryExt
+# Copyright (C) 2015-2019 CERN.
+# Copyright (C) 2018-2019 infarm - Indoor Urban Farming GmbH.
+#
+# Flask-CeleryExt is free software; you can redistribute it and/or modify it
+# under the terms of the Revised BSD License; see LICENSE file for more
+# details.
+
+"""Flask-CeleryExt is a simple integration layer between Celery and Flask."""
+
+import os
+
+from setuptools import find_packages, setup
+
+readme = open('README.rst').read()
+history = open('CHANGES.rst').read()
+
+tests_require = [
+    'pytest-mock>=2.0.0',
+    'pytest-invenio>=1.4.0',
+]
+
+extras_require = {
+    'docs': [
+        'Sphinx>=3',
+    ],
+    'tests': tests_require,
+}
+
+extras_require['all'] = []
+for reqs in extras_require.values():
+    extras_require['all'].extend(reqs)
+
+setup_requires = [
+    'pytest-runner>=2.6.2',
+]
+
+install_requires = [
+    'Flask>=0.10',
+    'celery>=3.1;python_version<"3.7"',
+    'celery>=4.3;python_version>="3.7"',
+]
+
+packages = find_packages()
+
+
+# Get the version string. Cannot be done with import!
+g = {}
+with open(os.path.join('flask_celeryext_pro', 'version.py'), 'rt') as fp:
+    exec(fp.read(), g)
+    version = g['__version__']
+
+setup(
+    name='Flask-CeleryExt-Pro',
+    version=version,
+    description=__doc__,
+    long_description=readme + '\n\n' + history,
+    keywords='flask celery',
+    license='BSD',
+    author='chenjunxue',
+    author_email='1523825571@qq.com',
+    url='https://github.com/asihacker/flask-celeryext',
+    packages=packages,
+    zip_safe=False,
+    include_package_data=True,
+    platforms='any',
+    extras_require=extras_require,
+    install_requires=install_requires,
+    setup_requires=setup_requires,
+    tests_require=tests_require,
+    classifiers=[
+        'Environment :: Web Environment',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python',
+        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
+        'Topic :: Software Development :: Libraries :: Python Modules',
+        'Topic :: Software Development :: Object Brokering',
+        'Topic :: System :: Distributed Computing',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
+        'Development Status :: 5 - Production/Stable',
+    ],
+)

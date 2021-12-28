@@ -1,0 +1,2 @@
+CircuitBreakerName = str
+StateName = str

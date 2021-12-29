@@ -1,0 +1,1 @@
+PACKGAE_CONFIG_FILENAME="package.json"
